@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import VibeTag from './VibeTag.jsx'
 import { getCapacityStatus } from '../utils/capacity.js'
 import { getTeamFlag } from '../data/teams.js'
@@ -31,6 +31,25 @@ export default function SidePanel({ party, onClose, onRsvp }) {
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const cap = p ? getCapacityStatus(p.rsvpCount, p.capacity) : null
+
+  const [copied, setCopied] = useState(false)
+  const copyAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(p.address)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // Clipboard blocked — select the text so the user can copy manually.
+      const el = document.getElementById('wp-address-text')
+      if (el) {
+        const range = document.createRange()
+        range.selectNodeContents(el)
+        const sel = window.getSelection()
+        sel.removeAllRanges()
+        sel.addRange(range)
+      }
+    }
+  }
 
   return (
     <>
@@ -89,6 +108,27 @@ export default function SidePanel({ party, onClose, onRsvp }) {
                   </div>
                 </div>
               </div>
+
+              {/* Address (copy-paste) */}
+              {p.address && (
+                <div className="rounded-lg border border-border-subtle p-3">
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="font-mono text-xs uppercase tracking-wide text-night-black/50">
+                      📍 Address
+                    </span>
+                    <button
+                      type="button"
+                      onClick={copyAddress}
+                      className="rounded-md border border-border-subtle px-2 py-0.5 font-mono text-xs text-grass-green hover:bg-pitch-white"
+                    >
+                      {copied ? '✓ Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <p id="wp-address-text" className="select-all text-sm text-night-black">
+                    {p.address}
+                  </p>
+                </div>
+              )}
 
               {/* Capacity */}
               <div

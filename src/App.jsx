@@ -11,6 +11,9 @@ import { streamVibeDescription } from './utils/vibeGenerator.js'
 import { seedWatchParties } from './data/seedData.js'
 
 const DEFAULT_FILTERS = { date: 'all', team: '', vibe: [] }
+// Bump SEED_VERSION whenever seedData changes so existing users get new parties.
+const SEED_VERSION = '2'
+const SEED_VERSION_KEY = 'watchparty_seed_version'
 
 export default function App() {
   const [parties, setParties] = useState([])
@@ -18,16 +21,26 @@ export default function App() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [hostOpen, setHostOpen] = useState(false)
   const [rsvpParty, setRsvpParty] = useState(null)
+  const [mapFocus, setMapFocus] = useState(null)
 
   // Load from localStorage; seed on first run so the demo map is populated.
+  // Seed versioning: when the seed list grows, merge in any seed parties the
+  // user is missing (by id) without removing the ones they added themselves.
   useEffect(() => {
-    const stored = getEvents()
+    let stored = getEvents()
     if (stored.length === 0) {
-      setEvents(seedWatchParties)
-      setParties(seedWatchParties)
-    } else {
-      setParties(stored)
+      stored = seedWatchParties
+      setEvents(stored)
+    } else if (localStorage.getItem(SEED_VERSION_KEY) !== SEED_VERSION) {
+      const existingIds = new Set(stored.map((p) => p.id))
+      const missing = seedWatchParties.filter((s) => !existingIds.has(s.id))
+      if (missing.length) {
+        stored = [...stored, ...missing]
+        setEvents(stored)
+      }
     }
+    localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION)
+    setParties(stored)
   }, [])
 
   const filtered = useMemo(() => filterParties(parties, filters), [parties, filters])
@@ -42,6 +55,8 @@ export default function App() {
     setHostOpen(false)
     setFilters(DEFAULT_FILTERS) // ensure the new pin is visible
     setSelectedParty(party) // confirmation: open its panel
+    // Fly the map to the new party's location (key changes each add to retrigger).
+    setMapFocus({ coordinates: party.coordinates, key: party.id })
   }
 
   const handleRsvp = ({ party, guestName, guestEmail }) => {
@@ -72,7 +87,7 @@ export default function App() {
         resultCount={filtered.length}
       />
       <div className="relative flex-1">
-        <MapView parties={filtered} onPinClick={setSelectedParty} />
+        <MapView parties={filtered} onPinClick={setSelectedParty} focus={mapFocus} />
         {filtered.length === 0 && (
           <div className="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center p-6">
             <div className="pointer-events-auto rounded-xl bg-card-surface/95 px-6 py-5 text-center shadow-lg ring-1 ring-border-subtle">

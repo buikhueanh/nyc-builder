@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { upcomingFixtures } from '../data/fixtures.js'
 import { teams as ALL_TEAMS } from '../data/teams.js'
 import { nycNeighborhoods } from '../data/neighborhoods.js'
+import { nycLocations } from '../data/locations.js'
 import { VIBE_TAGS } from '../data/vibeTags.js'
 import { geocodeAddress } from '../utils/geocode.js'
 
@@ -205,11 +206,19 @@ export default function HostModal({ open, onClose, onSubmit, onGenerateVibe }) {
                 id="address"
                 name="address"
                 autoComplete="off"
+                list="address-options"
                 className={field}
-                placeholder="456 Court St, Brooklyn"
+                placeholder="Search a venue or type an address…"
                 value={form.address}
                 onChange={(e) => update({ address: e.target.value })}
               />
+              <datalist id="address-options">
+                {nycLocations.map((loc) => (
+                  <option key={loc.address} value={loc.address}>
+                    {loc.label}
+                  </option>
+                ))}
+              </datalist>
             </div>
             <div>
               <label htmlFor="neighborhood" className={labelCls}>Neighborhood</label>

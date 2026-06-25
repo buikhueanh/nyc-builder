@@ -18,7 +18,7 @@ function makeIcon(party) {
   })
 }
 
-export default function MapView({ parties, onPinClick }) {
+export default function MapView({ parties, onPinClick, focus }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const layerRef = useRef(null)
@@ -58,6 +58,24 @@ export default function MapView({ parties, onPinClick }) {
         .on('click', () => onPinClickRef.current?.(party))
     })
   }, [parties])
+
+  // Fly to a requested location (e.g. a just-added party). The center is shifted
+  // so the pin stays visible beside the SidePanel (right on desktop, bottom sheet
+  // on mobile) instead of hiding underneath it.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !focus?.coordinates) return
+    const { lat, lng } = focus.coordinates
+    const zoom = Math.max(map.getZoom(), 15)
+    const size = map.getSize()
+    const point = map.project([lat, lng], zoom)
+    if (window.matchMedia('(min-width: 768px)').matches) {
+      point.x += Math.min(size.x * 0.22, 220) // desktop: panel on the right
+    } else {
+      point.y -= Math.min(size.y * 0.22, 180) // mobile: bottom sheet
+    }
+    map.flyTo(map.unproject(point, zoom), zoom, { duration: 0.8 })
+  }, [focus])
 
   return <div ref={containerRef} className="h-full w-full" aria-label="Watch party map" />
 }
